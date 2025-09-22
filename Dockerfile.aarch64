@@ -1,4 +1,6 @@
-FROM ghcr.io/linuxserver/baseimage-alpine:arm64v8-3.15
+# syntax=docker/dockerfile:1
+
+FROM ghcr.io/linuxserver/baseimage-alpine:arm64v8-3.20
 
 # set version label
 ARG BUILD_DATE
@@ -7,33 +9,38 @@ ARG OSCAM_VERSION
 LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="saarg"
 
+ENV \
+  MAKEFLAGS="-j4"
+
 RUN \
   echo "**** install build packages ****" && \
   apk add --no-cache --virtual=build-dependencies \
-    gcc \
-    g++ \
+    build-base \
+    libdvbcsa-dev \
     libusb-dev \
     linux-headers \
-    make \
     openssl-dev \
-    pcsc-lite-dev \
-    subversion \
-    tar && \
+    pcsc-lite-dev && \
   echo "**** install runtime packages ****" && \
   apk add --no-cache \
     ccid \
-    curl \
-    libcrypto1.1 \
-    libssl1.1 \
+    libdvbcsa \
     libusb \
+    openssl \
     pcsc-lite \
     pcsc-lite-libs && \
   echo "**** compile oscam ****" && \
   if [ -z ${OSCAM_VERSION+x} ]; then \
-    OSCAM_VERSION=$(svn info --show-item revision https://svn.streamboard.tv/oscam/trunk ); \
+    OSCAM_VERSION=$(curl -s https://git.streamboard.tv/api/v4/projects/11/repository/tags | jq -r '.[0].name'); \
   fi && \
-  svn checkout https://svn.streamboard.tv/oscam/trunk@${OSCAM_VERSION} /tmp/oscam-svn && \
-  cd /tmp/oscam-svn && \
+  mkdir -p /tmp/oscam && \
+  curl -o \
+    /tmp/oscam.tar.gz -L \
+    "https://git.streamboard.tv/common/oscam/-/archive/${OSCAM_VERSION}/oscam-${OSCAM_VERSION}.tar.gz" && \
+  tar xf \
+    /tmp/oscam.tar.gz -C \
+    /tmp/oscam --strip-components=1 && \
+  cd /tmp/oscam && \
   ./config.sh \
     --enable all \
     --disable \
@@ -57,14 +64,14 @@ RUN \
     /usr/sbin/pcscd && \
   chmod 755 \
     /usr/sbin/pcscd && \
-  echo "**** install PCSC drivers ****" && \
+  echo "**** install PCSC drivers from Linuxserver S3 due to Cloudflare blocking curl download from source (original file at https://www3.hidglobal.com/sites/default/files/drivers/ifdokccid_linux_x86_64-v4.2.8.tar.gz) ****" && \
   mkdir -p \
     /tmp/omnikey && \
   curl -o \
-  /tmp/omnikey.tar.gz -L \
-    https://www.hidglobal.com/sites/default/files/drivers/ifdokccid_linux_x86_64-v4.2.8.tar.gz && \
+    /tmp/omnikey.tar.gz -L \
+    "https://ci-tests.linuxserver.io/artifacts/ifdokccid_linux_x86_64-v4.2.8.tar.gz" && \
   tar xzf \
-  /tmp/omnikey.tar.gz -C \
+    /tmp/omnikey.tar.gz -C \
     /tmp/omnikey --strip-components=2 && \
   cd /tmp/omnikey && \
   ./install && \
@@ -72,6 +79,7 @@ RUN \
   groupmod -g 24 cron && \
   groupmod -g 16 dialout && \
   usermod -a -G 16 abc && \
+  printf "Linuxserver.io version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version && \
   echo "**** cleanup ****" && \
   apk del --purge \
     build-dependencies && \
