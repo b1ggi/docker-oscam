@@ -2,7 +2,7 @@ name: Sync fork with upstream
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # alle 30 Minuten
+    - cron: '40 1 * * *' # alle 30 Minuten
   workflow_dispatch:
 
 permissions:
