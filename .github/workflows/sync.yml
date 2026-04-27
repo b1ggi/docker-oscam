@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  workflows: write
 
 concurrency:
   group: sync-upstream
@@ -53,4 +54,4 @@ jobs:
 
           git rebase "upstream/$UPSTREAM_BRANCH"
           git push origin "$ORIGIN_BRANCH" --force-with-lease
-          git push origin --tags
+          #git push origin --tags
