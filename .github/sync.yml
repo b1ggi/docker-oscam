@@ -1,0 +1,56 @@
+name: Sync fork with upstream
+
+on:
+  schedule:
+    - cron: '40 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/linuxserver/docker-oscam.git
+          git fetch upstream --tags
+
+      - name: Determine default branches
+        id: branches
+        shell: bash
+        run: |
+          ORIGIN_BRANCH=$(git remote show origin | sed -n '/HEAD branch/s/.*: //p')
+          UPSTREAM_BRANCH=$(git remote show upstream | sed -n '/HEAD branch/s/.*: //p')
+          echo "origin_branch=$ORIGIN_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "upstream_branch=$UPSTREAM_BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Sync and rebase own commits
+        env:
+          ORIGIN_BRANCH: ${{ steps.branches.outputs.origin_branch }}
+          UPSTREAM_BRANCH: ${{ steps.branches.outputs.upstream_branch }}
+        run: |
+          git checkout "$ORIGIN_BRANCH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch upstream --tags
+
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse "upstream/$UPSTREAM_BRANCH")" ]; then
+            echo "Already up to date."
+            exit 0
+          fi
+
+          git rebase "upstream/$UPSTREAM_BRANCH"
+          git push origin "$ORIGIN_BRANCH" --force-with-lease
+          git push origin --tags
