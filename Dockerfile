@@ -56,6 +56,8 @@ RUN \
     DEFAULT_PCSC_FLAGS="-I/usr/include/PCSC" \
     NO_PLUS_TARGET=1 \
     OSCAM_BIN=/usr/bin/oscam \
+    USE_SSL=1 \
+    USE_LIBCRYPTO=1 \
     pcsc-libusb && \
   echo "**** fix broken permissions from pcscd install ****" && \
   chown root:root \
