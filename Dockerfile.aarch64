@@ -51,7 +51,8 @@ RUN \
     IPV6SUPPORT \
     LCDSUPPORT \
     LEDSUPPORT \
-    READ_SDT_CHARSETS && \
+    READ_SDT_CHARSETS \
+    WITH_SIGNING && \
   make \
     CONF_DIR=/config \
     DEFAULT_PCSC_FLAGS="-I/usr/include/PCSC" \
