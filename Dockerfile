@@ -37,6 +37,8 @@ RUN \
   git clone \
     --branch "${OSCAM_VERSION}" \
     --depth 1 \
+    --recurse-submodules \
+    --shallow-submodules \
     https://git.streamboard.tv/common/oscam \
     /tmp/oscam && \
   cd /tmp/oscam && \
